@@ -3,6 +3,7 @@ import urllib2
 import lxml.etree as etree
 import mlbgame
 from datetime import date
+import constants
 
 
 def getMLBOdds(year, month, day, cursor):
@@ -104,15 +105,16 @@ def getSchedule(year, month, day, cursor):
 
 
 if __name__ == "__main__":
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
     cursor = cnx.cursor()
 
     # get games
-    year = 2017
-    month = 7
-    day = 28
+    year = constants.yearP
+    month = constants.monthP
+    day = constants.dayP
 
     getSchedule(year, month, day, cursor)
     getMLBOdds(year, month, day, cursor)

@@ -3,6 +3,7 @@ import mysql.connector
 from pydfs_lineup_optimizer import *
 from decimal import *
 import numpy as np
+import constants
 
 def getDate(day, month, year, cursor):
     findGame = 'SELECT iddates FROM dates WHERE date = %s'
@@ -337,14 +338,16 @@ def optimize(day, month, year, cursor):
     print "Contraiance Rating: " + str(lowestContraiance)
 
 if __name__ == "__main__":
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
+
     cursor = cnx.cursor(buffered=True)
 
-    year = 2017
-    month = 7
-    day = 28
+    year = constants.yearP
+    month = constants.monthP
+    day = constants.dayP
 
     percentageOwnedandVarianceNormalization(day, month, year, cursor)
     optimize(day, month, year, cursor)

@@ -4,6 +4,7 @@ from datetime import date
 import mysql.connector
 import requests
 import re
+import constants
 
 # Seperate name from handedness: input e.g. "Travis Wood (L)"
 def parsePitcher(combinedString):
@@ -198,14 +199,15 @@ def getLineups(day, month, year, url, cursor):
     print "Updated Starting Lineups and Batting Order"
 
 if __name__ == "__main__":
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
     cursor = cnx.cursor()
 
-    year = 2017
-    month = 7
-    day = 28
+    year = constants.yearP
+    month = constants.monthP
+    day = constants.dayP
 
     getLineups(day, month, year, "http://www.baseballpress.com/lineups", cursor)
 

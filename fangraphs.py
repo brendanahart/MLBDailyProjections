@@ -3,6 +3,7 @@ import urllib2
 import mysql.connector
 import numpy as np
 import math
+import constants
 
 def fangraphsTeamStats(url, cursor):
     page = urllib2.urlopen(url).read()
@@ -266,9 +267,10 @@ def fangraphsFielding(url, cursor):
             cursor.execute(addPitcher, pitcherData)
 
 if __name__ == "__main__":
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
     cursor = cnx.cursor()
 
     fangraphsBatterAdvSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=1&season=2017&month=13&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'L')

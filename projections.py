@@ -4,6 +4,7 @@ import mysql.connector
 import urllib2
 import demjson
 import numpy as np
+import constants
 
 def updateLeagueProjections(cursor):
     leagueProjUpdateQuery = "UPDATE leaguebaverages SET wOBA = ((0.693)*(BB - IBB) + (0.723)*HBP + (0.876)*(H - (2B + 3B + HR)) + (1.231)*2B + (1.55)*3B + (1.977)*HR)/(AB + BB - IBB + SF + HBP), ISO = (SLG - BA), KP = SO/PA, BBP = BB/PA, BABIP = (H - HR)/(AB - SO - HR + SF)"
@@ -105,6 +106,9 @@ def updateBatterProjections(day, month, year, cursor):
 
     getLeagueAverages = "SELECT wOBA, KP, BBP, ISO, BABIP, OBP, OPS, SLG FROM leaguebaverages WHERE Year = 2017"
     cursor.execute(getLeagueAverages)
+
+    minIPL = 10
+    minIPR = 10
 
     avgWOBA = 0
     avgKP = 0
@@ -263,7 +267,7 @@ def updateBatterProjections(day, month, year, cursor):
                 # ExAvg = ((BAVG * PAVG) / LgAVG) / ((BAVG * PAVG) / LgAVG + ((1-BAVG)*(1-PAVG)/(1-LgAvg)))
                 # B x P / (0.84 x B x P + 0.16)
 
-                if ipL < 10 or ipR < 10:
+                if ipL < minIPL or ipR < minIPR:
                     getPitcherZipsQ = "SELECT BAL, OBPL, SLGL, OPSL, BAR, OBPR, SLGR, OPSR, BBPL, BBPR, KPL, KPR, ISOL, ISOR, WOBAL, WOBAR, BABIPL, BABIPR FROM zipspitcherplatoon WHERE mlbID = %s"
                     getPitcherZipsD = (pmlbID,)
                     cursor.execute(getPitcherZipsQ, getPitcherZipsD)
@@ -787,14 +791,15 @@ def pitcherAggProjections(day, month, year, cursor):
     print ("Updated Projections for Pitchers")
 
 if __name__ == "__main__":
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
     cursor = cnx.cursor(buffered=True)
 
-    year = 2017
-    month = 7
-    day = 28
+    year = constants.yearP
+    month = constants.monthP
+    day = constants.dayP
 
     updateLeagueProjections(cursor)
     getParkFactors(cursor)

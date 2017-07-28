@@ -6,6 +6,7 @@ import os
 import datetime as dt
 from itertools import chain
 import matplotlib.pyplot as plt
+import constants
 
 
 def getDates(day, month, year, numdays, cursor):
@@ -26,18 +27,20 @@ def getDates(day, month, year, numdays, cursor):
 
 
 if __name__ == "__main__":
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
+
     cursor = cnx.cursor()
 
     # dates to retrieve data for batter test data
     # start date
-    year = 2017
-    month = 7
-    day = 27
+    year = constants.bdsStartYear
+    month = constants.bdsStartMonth
+    day = constants.bdsStartDay
 
-    numdays = 2
+    numdays = constants.bdsNumDays
 
     gameIDs = getDates(day, month, year, numdays, cursor)
 
@@ -127,4 +130,3 @@ if __name__ == "__main__":
         plt.show()
 
         i = i + 1
-

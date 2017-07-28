@@ -2,6 +2,7 @@ import mlbgame
 import mysql.connector
 from datetime import datetime, date
 import math
+import constants
 
 def alterBatter(batterID, gameID, cursor):
     # daily batter data
@@ -96,13 +97,7 @@ def getDate(day, month, year, cursor):
 
     return dateID
 
-def getGeneralData(day, month, year, mode):
-    # database connection
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
-    cursor = cnx.cursor()
-
+def getGeneralData(day, month, year, mode, cursor):
     # get games
     year = year
     month = month
@@ -197,20 +192,9 @@ def getGeneralData(day, month, year, mode):
 
     alterPitcher(winningPitchers, losingPitchers, pitcherID, gameID, cursor)
 
-    # close + save
-    cursor.close()
-    cnx.commit()
-    cnx.close()
-
     print "Updated Baseball Database for Games on %s/%s/%s" % (month, day, year)
 
-def updateDKPointsBatters(day, month, year):
-    # database connection
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
-    cursor = cnx.cursor()
-
+def updateDKPointsBatters(day, month, year, cursor):
     gameID = getDate(day, month, year, cursor)
     # batters
     dkQuery = "SELECT * from battersdaily WHERE bgameID = %s"
@@ -225,17 +209,9 @@ def updateDKPointsBatters(day, month, year):
         updateBatData = (pointTotal, batters[0])
         cursor.execute(updateBat, updateBatData)
 
-    cursor.close()
-    cnx.commit()
-    cnx.close()
-
     print "Updated Batters DK Points"
 
-def updateDKPointsPitchers(day, month, year):
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
-    cursor = cnx.cursor()
+def updateDKPointsPitchers(day, month, year, cursor):
 
     gameID = getDate(day, month, year, cursor)
     # batters
@@ -262,16 +238,22 @@ def updateDKPointsPitchers(day, month, year):
         updatePitcherData = (pointsTotal, pitchers[0])
         cursor.execute(updatePitcherQuery, updatePitcherData)
 
-    cursor.close()
-    cnx.commit()
-    cnx.close()
-
     print "Updated Pitchers DK Points"
 
 if __name__ == "__main__":
-    year = 2017
-    month = 7
-    day = 27
-    getGeneralData(day, month, year, "update")
-    updateDKPointsBatters(day, month, year)
-    updateDKPointsPitchers(day, month, year)
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
+    cursor = cnx.cursor()
+
+    year = constants.yearP
+    month = constants.monthP
+    day = constants.dayP
+    getGeneralData(day, month, year, "update", cursor)
+    updateDKPointsBatters(day, month, year, cursor)
+    updateDKPointsPitchers(day, month, year, cursor)
+
+    cursor.close()
+    cnx.commit()
+    cnx.close()

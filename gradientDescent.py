@@ -5,6 +5,7 @@ import os
 import datetime as dt
 from itertools import chain
 import matplotlib.pyplot as plt
+import constants
 
 def getDate(day, month, year, cursor):
     gameIDP = 0
@@ -120,24 +121,25 @@ def gradientDescentMulti(X, y, theta, alpha, numIters):
 if __name__ == "__main__":
     print "Loading data..."
 
-    cnx = mysql.connector.connect(user='root',
-                                  host='127.0.0.1',
-                                  database='baseball')
+    cnx = mysql.connector.connect(user=constants.databaseUser,
+                                  host=constants.databaseHost,
+                                  database=constants.databaseName,
+                                  password=constants.databasePassword)
     cursor = cnx.cursor()
 
     # predict data
     # date to predict
-    yearP = 2017
-    monthP = 7
-    dayP = 28
+    yearP = constants.yearP
+    monthP = constants.monthP
+    dayP = constants.dayP
 
     # dates to retrieve data for batter test data
     # start date
-    year = 2017
-    month = 7
-    day = 27
+    year = constants.gdStartYear
+    month = constants.gdStartMonth
+    day = constants.gdStartDay
 
-    numdays = 9
+    numdays = constants.numdaysGradientDescent
 
     gameIDs = getDates(day, month, year, numdays, cursor)
 
@@ -286,103 +288,6 @@ if __name__ == "__main__":
         bID = bID + 1
 
     print "Predicted DK Points for Batters"
-
-    '''
-    # pitcher projections
-    # start date to retreive pitcher test data
-    year = 2017
-    month = 7
-    day = 20
-
-    numdays = 1
-
-    gamePIDs = getDates(day, month, year, numdays, cursor)
-
-    getPTestData = "SELECT pitcherID, rotogrindersPoints, saberSimPoints, rotowirePoints, dkpoints FROM baseball.pitchersdaily LEFT JOIN baseball.pitchers ON pitchersdaily.pitcherID = pitchers.idpitchers  WHERE pitchersdaily.pgameID = %s"
-
-    numpyPDataArrays = []
-    # execute command + load into numpy array
-    for game in gamePIDs:
-        testVariables = (game,)
-        cursor.execute(getPTestData, testVariables)
-
-        results = cursor.fetchall()
-        numRows = cursor.rowcount
-
-        D = np.fromiter(chain.from_iterable(results), dtype=float, count=-1)
-
-        D = D.reshape(numRows, -1)
-        numpyPDataArrays.append(D)
-
-    iterPDataSets = iter(numpyPDataArrays)
-    next(iterPDataSets)
-    testPData = numpyPDataArrays[0]
-    for dataArray in iterPDataSets:
-        testPData = np.vstack((testPData, dataArray))
-
-    # split data
-    numPFeatures = 3
-    pitcherIDs, testPX = np.split(testPData, [1], 1)
-    testPX, testPY = np.split(testPX, [numPFeatures], 1)
-
-    # add bias term
-    onesP = np.ones((np.shape(testPX)[0], 1), dtype=float)
-    testPX = np.hstack((onesP, testPX))
-
-    # learning rate + iterations
-    alphaP = 0.0005
-    num_itersP = 10000
-
-    # theta initialization
-    thetaP = np.zeros(((numPFeatures + 1), 1))
-    thetaP = np.transpose(thetaP)
-
-    thetaP = gradientDescentMulti(testPX, testPY, thetaP, alphaP, num_itersP)
-
-    print "Pitcher Theta Values"
-    print thetaP
-
-    gameIDPP = getDate(dayP, monthP, yearP, cursor)
-
-    getPPredictData = "SELECT pitcherID, rotogrindersPoints, saberSimPoints, rotowirePoints FROM baseball.pitchersdaily LEFT JOIN baseball.pitchers ON pitchersdaily.pitcherID = pitchers.idpitchers  WHERE pitchersdaily.pgameID = %s"
-
-    testPVariables = (gameIDPP,)
-    cursor.execute(getPPredictData, testPVariables)
-
-    resultsP = cursor.fetchall()
-    numRowsP = cursor.rowcount
-
-    DP = np.fromiter(chain.from_iterable(resultsP), dtype=float, count=-1)
-
-    targetPData = DP.reshape(numRowsP, -1)
-
-    # split data
-    pitcherIDs, targetPX = np.split(targetPData, [1], 1)
-
-    # add bias term
-    onesP = np.ones((np.shape(targetPX)[0], 1), dtype=float)
-    targetPX = np.hstack((onesP, targetPX))
-
-    # predict
-    targetPY = targetPX.dot(np.transpose(thetaP))
-
-    # load predictions into database
-
-    pID = 0
-    numPitchers = np.shape(pitcherIDs)[0]
-    while pID < numPitchers:
-        pitcherID = int(pitcherIDs[pID, 0])
-        pitcherProjection = float(targetY[pID, 0])
-
-        updatePitchersDKPoints = "UPDATE pitchersdaily SET dkPointsPred = %s WHERE pgameID = %s AND pitcherID = %s"
-        updatePtichersDKPointsData = (pitcherProjection, gameIDPP, pitcherID)
-        cursor.execute(updatePitchersDKPoints, updatePtichersDKPointsData)
-
-        pID = pID + 1
-
-
-    print "Predicted DK Points for Pitchers"
-    '''
 
     cursor.close()
     cnx.commit()
