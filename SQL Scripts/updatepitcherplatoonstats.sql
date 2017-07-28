@@ -1,0 +1,2 @@
+UPDATE baseball.zipspitcherplatoon
+SET BBPL = (BBL/TBFL), BBPR = (BBR/TBFR), KPL = (SOL/TBFL), KPR = (SOR/TBFR), ISOL = ((2BL + 2*3BL + 3*HRL)/ABL), ISOR = ((2BR + 2*3BR + 3*HRR)/ABR), WOBAL = ((0.693*(BBL - IBBL) + 0.723*HBPL + 0.876*(HitsL - 2BL - 3BL - HRL) + 1.231*2BL + 1.55*3BL + 1.977*HRL)/(ABL + BBL - IBBL + SFL + HBPL)), WOBAR = ((0.693*(BBR - IBBR) + 0.723*HBPR + 0.876*(HitsR - 2BR - 3BR - HRR) + 1.231*2BR + 1.55*3BR + 1.977*HRR)/(ABR + BBR - IBBR + SFR + HBPR)), BABIPL = ((HitsL - HRL)/(ABL - SOL - HRL - SFL)), BABIPR = ((HitsR - HRR)/(ABR - SOR - HRR - SFR))
