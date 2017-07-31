@@ -15,7 +15,7 @@ def getMLBOdds(year, month, day, cursor):
     for datez in cursor:
         dateID = datez[0]
 
-    base_url = "http://sportsfeeds.bovada.lv/basic/MLB.xml"
+    base_url = constants.BovadaOdds
     data = urllib2.urlopen(base_url)
     xml = etree.parse(data)
 

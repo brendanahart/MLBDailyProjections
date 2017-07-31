@@ -45,7 +45,8 @@ if __name__ == "__main__":
     gameIDs = getDates(day, month, year, numdays, cursor)
 
     # select data with cooresponding game id and other constraints
-    batterConstraints = ['paL', 'paR', 'rotogrindersPoints', 'dkPointsPred']
+    batterConstraints = ['paL', 'paR', 'dkPointsPred', 'dkPointsPredSKLin', 'dkPointsPredRidge', 'dkPointsPredRidgeP',
+                         'rotogrindersPoints']
     batterConstraintsValues = {}
     batterConstraintsTypes ={}
 
@@ -64,7 +65,7 @@ if __name__ == "__main__":
 
     constraintsString = constraintsString + ")"
 
-    features = ['battersdaily.rotogrindersPoints', 'dkPointsPred']
+    features = ['dkPointsPred', 'dkPointsPredSKLin', 'dkPointsPredRidge', 'dkPointsPredRidgeP', 'rotogrindersPoints']
     targets = ['battersdaily.dkpoints']
 
     featuresString = ""

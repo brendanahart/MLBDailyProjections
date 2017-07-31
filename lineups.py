@@ -43,15 +43,6 @@ def getLineups(day, month, year, url, cursor):
 
     cursor.execute(queryInitPStart, StartData)
 
-    queryInitBStart = "UPDATE batters SET start = %s"
-
-    cursor.execute(queryInitBStart, StartData)
-
-    queryInitBOrder = "UPDATE batters SET battingOrder = %s"
-    BOrderData = (0,)
-
-    cursor.execute(queryInitBOrder, BOrderData)
-
     page = requests.get(url)
     soup = BeautifulSoup(page.text, 'html.parser')
 
@@ -85,6 +76,11 @@ def getLineups(day, month, year, url, cursor):
             awayTeam = game.select("div .team-name")[0].text
             gameData["home"]["team"] = game.select("div .team-name")[1].string
             homeTeam = game.select("div .team-name")[1].text
+
+            if awayTeam == "Diamondbacks":
+                awayTeam = "D-backs"
+            if homeTeam == "Diamondbacks":
+                homeTeam = "D-backs"
 
             # Starting Pitchers
             awayPitcher, awayPitcherHand = parsePitcher(game.select(".text")[0].select('div')[1].text)
@@ -134,6 +130,28 @@ def getLineups(day, month, year, url, cursor):
 
             # insert into battersdaily
             queryInsertBatterDaily = "INSERT INTO battersdaily (batterID, bgameID, oppPitcher, team, oppTeam) VALUES (%s, %s, %s, %s, %s)"
+
+            # initialize starting batters to 0 for team if lineups are present
+            queryBTeam = "SELECT start, battingOrder, mlbID FROM batters WHERE team = %s"
+            if homePlayers:
+                queryBTeamD = (homeTeam, )
+                cursor.execute(queryBTeam, queryBTeamD)
+
+                players = cursor.fetchall()
+                for playa in players:
+                    queryUpdateStart = "UPDATE batters SET start = %s, battingOrder = %s WHERE mlbID = %s"
+                    queryUpdateStartD = (0, 0, int(playa[2]))
+                    cursor.execute(queryUpdateStart, queryUpdateStartD)
+
+            if awayPlayers:
+                queryBTeamD = (awayTeam,)
+                cursor.execute(queryBTeam, queryBTeamD)
+
+                players = cursor.fetchall()
+                for playa in players:
+                    queryUpdateStart = "UPDATE batters SET start = %s, battingOrder = %s WHERE mlbID = %s"
+                    queryUpdateStartD = (0, 0, int(playa[2]))
+                    cursor.execute(queryUpdateStart, queryUpdateStartD)
 
             i = 0
             for player in awayPlayers:
@@ -196,6 +214,39 @@ def getLineups(day, month, year, url, cursor):
 
             saveData.append(gameData)
 
+            # get projected starters if no starting lineup
+            if not homePlayers:
+                queryGetProjHomePlayers = "SELECT idbatters FROM batters WHERE team = %s and start = %s"
+                queryGetProjHomePlayersD = (homeTeam, 1)
+                cursor.execute(queryGetProjHomePlayers, queryGetProjHomePlayersD)
+
+                projHomePlayers = cursor.fetchall()
+
+                idBatter = 0
+                for projHomePlaya in projHomePlayers:
+                    idBatter = projHomePlaya[0]
+                    batterDailyData = (idBatter, gameID, idAwayPitcher, homeTeam, awayTeam)
+                    try:
+                        cursor.execute(queryInsertBatterDaily, batterDailyData)
+                    except:
+                        pass
+
+            if not awayPlayers:
+                queryGetProjAwayPlayers = "SELECT idbatters FROM batters WHERE team = %s and start = %s"
+                queryGetProjAwayPlayersD = (awayTeam, 1)
+                cursor.execute(queryGetProjAwayPlayers, queryGetProjAwayPlayersD)
+
+                projAwayPlayers = cursor.fetchall()
+
+                idBatter = 0
+                for projAwayPlaya in projAwayPlayers:
+                    idBatter = projAwayPlaya[0]
+                    batterDailyData = (idBatter, gameID, idHomePitcher, awayTeam, homeTeam)
+                    try:
+                        cursor.execute(queryInsertBatterDaily, batterDailyData)
+                    except:
+                        pass
+
     print "Updated Starting Lineups and Batting Order"
 
 if __name__ == "__main__":
@@ -209,7 +260,7 @@ if __name__ == "__main__":
     month = constants.monthP
     day = constants.dayP
 
-    getLineups(day, month, year, "http://www.baseballpress.com/lineups", cursor)
+    getLineups(day, month, year, constants.Lineups, cursor)
 
     cursor.close()
     cnx.commit()

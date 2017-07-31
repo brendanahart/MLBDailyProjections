@@ -4,6 +4,7 @@ import mysql.connector
 import numpy as np
 import math
 import constants
+import csv
 
 def fangraphsTeamStats(url, cursor):
     page = urllib2.urlopen(url).read()
@@ -98,9 +99,11 @@ def fangraphsBatterStats(url, cursor):
 
     for player in data.find_all('tr'):
         tds = player.find_all('td')
-        playerID = tds[1].a['href']
-        junk,ID = playerID.split('playerid=')
-        ID,junk = ID.split('&position=')
+        ID = -1
+        if tds[1].find_all('a'):
+            playerID = tds[1].a['href']
+            junk,ID = playerID.split('playerid=')
+            ID,junk = ID.split('&position=')
         bbRate = float(tds[4].text[:-2])/100
         kRate = float(tds[5].text[:-2])/100
         obp = tds[8].text
@@ -266,6 +269,28 @@ def fangraphsFielding(url, cursor):
             pitcherData = (sbProbaility, int(idpitcher[0]))
             cursor.execute(addPitcher, pitcherData)
 
+def fangraphsUpdateSeasonStats(path, filename, day, month, year, cursor):
+    file = path + filename + str(day) + str(month) + str(year) + '.csv'
+    with open(file) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            queryMLBID = "SELECT key_mlbam from people WHERE key_fangraphs = %s"
+            queryMLBIDData = (row['playerid'],)
+
+            cursor.execute(queryMLBID, queryMLBIDData)
+
+            for idbatter in cursor:
+                try:
+                    # insert into batters table, update if not there
+                    addBatter = "INSERT INTO batters (mlbID, wOBA, ISO, OBP, SLG, OPS, KP, BB, BABIP, wSB) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                    batterData = (int(idbatter[0]), row['w OBA'], row['ISO'], row['OBP'], row['SLG'], row['OPS'], row['K%'], row['BB%'], row['BABIP'])
+                    cursor.execute(addBatter, batterData)
+                except:
+                    addBatter = "UPDATE batters SET wOBA = %s, ISO = %s, OBP = %s, SLG = %s, OPS = %s, KP = %s, BB = %s, BABIP = %s WHERE mlbID = %s"
+                    batterData = (row['w OBA'], row['ISO'], row['OBP'], row['SLG'], row['OPS'], row['K%'], row['BB%'], row['BABIP'], int(idbatter[0]))
+                    cursor.execute(addBatter, batterData)
+    return
+
 if __name__ == "__main__":
     cnx = mysql.connector.connect(user=constants.databaseUser,
                                   host=constants.databaseHost,
@@ -273,33 +298,36 @@ if __name__ == "__main__":
                                   password=constants.databasePassword)
     cursor = cnx.cursor()
 
-    fangraphsBatterAdvSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=1&season=2017&month=13&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'L')
-    fangraphsBatterAdvSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=1&season=2017&month=14&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'R')
+    '''
+    fangraphsUpdateSeasonStats('/Development/Baseball/FangraphsStats/', 'FanGraphsSplitsLeaderboardData',
+    constants.dayP, constants.monthP, constants.yearP, cursor)
+    print ("Updated Season Stats")
+
+    '''
+
+    fangraphsBatterAdvSplits(constants.BatterAdvSplitsL, cursor, 'L')
+    fangraphsBatterAdvSplits(constants.BatterAdvSplitsR, cursor, 'R')
 
     print "Updated Splits for Batters from Fangraphs for Season"
 
-    fangraphsBatterStats("http://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=1&season=2017&month=0&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor)
+    fangraphsBatterStats(constants.BatterStatsSeason, cursor)
 
     print "Updated Stats for Batters from Fangraphs for Season"
 
-    fangraphsBatterStats("http://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=1&season=2017&month=3&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor)
-
-    print "Updated Stats for Batters from Fangraphs for Past 30 Days, Overwriting Season Stats"
-
-    fangraphsPitcherBasicSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=0&season=2017&month=13&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'L')
-    fangraphsPitcherBasicSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=0&season=2017&month=14&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'R')
+    fangraphsPitcherBasicSplits(constants.PitcherBasicSplitsL, cursor, 'L')
+    fangraphsPitcherBasicSplits(constants.PitcherBasicSplitsR, cursor, 'R')
 
     print "Updated Basic Splits for Pitchers from Fangraphs for Season"
 
-    fangraphsPitcherAdvSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=1&season=2017&month=13&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'L')
-    fangraphsPitcherAdvSplits("http://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=1&season=2017&month=14&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor, 'R')
+    fangraphsPitcherAdvSplits(constants.PitcherAdvSplitsL, cursor, 'L')
+    fangraphsPitcherAdvSplits(constants.PitcherAdvSplitsR, cursor, 'R')
 
     print "Updated Advanced Splits for Pitchers from Fangraphs for Season"
 
-    fangraphsFielding("http://www.fangraphs.com/leaders.aspx?pos=p&stats=fld&lg=all&qual=0&type=0&season=2017&month=0&season1=2017&ind=0&team=0&rost=0&age=0&filter=&players=0&page=1_1500", cursor)
+    fangraphsFielding(constants.Fielding, cursor)
     print "Updated Stolen Base Data for Pitchers from Fangraphs for Season"
 
-    fangraphsTeamStats("http://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=8&season=2017&month=3&season1=2017&ind=0&team=0,ts&rost=0&age=0&filter=&players=0", cursor)
+    fangraphsTeamStats(constants.TeamStats, cursor)
 
     print "Updated Team Data from Fangraphs for past 30 days"
 

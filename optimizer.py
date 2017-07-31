@@ -132,7 +132,8 @@ def optimize(day, month, year, cursor):
     # teams constraints
     teamsBConstraint = '('
     teamsPConstraint = '('
-    teamsPlaying = [RAYS, YANKEES, REDS, MARLINS, DIAMONDBACKS, CARDINALS, CUBS, WHITESOX, METS, PADRES]
+    teamsPlaying = [RAYS, YANKEES, ANGELS, BLUEJAYS, ASTROS, TIGERS, REDS, MARLINS, ROYALS, REDSOX, BRAVES, PHILLIES, ROCKIES,
+                    NATIONALS, INDIANS, WHITESOX, CUBS, BREWERS, DIAMONDBACKS, CARDINALS, ORIOLES, RANGERS]
 
     for team in teamsPlaying:
         stringConstraint = 'battersdaily.team = ' + "'" + team + "'" + ' '
@@ -174,7 +175,7 @@ def optimize(day, month, year, cursor):
     # get players
     playas = []
 
-    getBPlayersQuery = "SELECT playerName, mlbID, pos, pos1, battersdaily.team, dkPointsPred, dkSalary, variance, contR, dkpoints FROM battersdaily LEFT JOIN batters ON battersdaily.batterID = batters.idbatters WHERE battersdaily.bgameID = %s AND pos != 'P' AND dkSalary IS NOT NULL AND "
+    getBPlayersQuery = "SELECT playerName, mlbID, pos, pos1, battersdaily.team, dkPointsPredRidgeP, dkSalary, variance, contR, dkpoints FROM battersdaily LEFT JOIN batters ON battersdaily.batterID = batters.idbatters WHERE battersdaily.bgameID = %s AND pos != 'P' AND dkSalary IS NOT NULL AND "
     getBPlayersQuery = getBPlayersQuery + constraintsString
     getBPlayersQuery = getBPlayersQuery + " AND "
     getBPlayersQuery = getBPlayersQuery + teamsBConstraint
@@ -213,7 +214,7 @@ def optimize(day, month, year, cursor):
         newPlaya = Player(bat[1], bat[0], "", positions, bat[4], int(bat[6]), float(bat[5]))
         playas.append(newPlaya)
 
-    getPPlayersQuery = "SELECT playerName, mlbID, pos, pitchersdaily.team, dkPointsPred, dkSalary, variance, contR, dkpoints FROM baseball.pitchersdaily LEFT JOIN baseball.pitchers ON pitchersdaily.pitcherID = pitchers.idpitchers WHERE pitchersdaily.pgameID = %s AND dkSalary IS NOT NULL AND dkPointsPred IS NOT NULL AND "
+    getPPlayersQuery = "SELECT playerName, mlbID, pos, pitchersdaily.team, dkPointsPred, dkSalary, variance, contR, dkpoints FROM baseball.pitchersdaily LEFT JOIN baseball.pitchers ON pitchersdaily.pitcherID = pitchers.idpitchers WHERE pitchersdaily.pgameID = %s AND dkSalary IS NOT NULL AND "
     getPPlayersQuery = getPPlayersQuery + teamsPConstraint
     getPPlayersData = (gameID,)
     print ("Pitcher Query: " + getPPlayersQuery)
@@ -241,7 +242,7 @@ def optimize(day, month, year, cursor):
 
     # if duplicate player, increase n + generate next lineup,
     # next lineup will generate lineup with next highest amount of points
-    numLineups = 9
+    numLineups = 4
     battersInOptimizer = 8
     pointThreshold = (float((highestPoints - lowestPoints))/numBatters)*battersInOptimizer
     lineups = optimizer.optimize(n=numLineups)
@@ -349,7 +350,7 @@ if __name__ == "__main__":
     month = constants.monthP
     day = constants.dayP
 
-    percentageOwnedandVarianceNormalization(day, month, year, cursor)
+    # percentageOwnedandVarianceNormalization(day, month, year, cursor)
     optimize(day, month, year, cursor)
 
     cursor.close()

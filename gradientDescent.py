@@ -1,4 +1,7 @@
 import numpy as np
+import scipy as sp
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import Ridge, LinearRegression
 import pandas as pd
 import mysql.connector
 import os
@@ -6,6 +9,7 @@ import datetime as dt
 from itertools import chain
 import matplotlib.pyplot as plt
 import constants
+import warnings
 
 def getDate(day, month, year, cursor):
     gameIDP = 0
@@ -34,6 +38,26 @@ def getDates(day, month, year, numdays, cursor):
             gameIDs.append(game[0])
 
     return gameIDs
+
+def mapFeatures(X):
+    '''
+    MAPFEATURE Feature mapping function to polynomial features
+    MAPFEATURE(X1, X2) maps the two input features
+    to quadratic features used in the regularization exercise.
+    Returns a new feature array with more features, comprising of
+    X1, X2, X1.^2, X2.^2, X1*X2, X1*X2.^2, etc..
+    Inputs X1, X2 must be the same size
+
+    :param X:
+    :return: XTransform
+    '''
+
+    degree = 4
+
+    poly = PolynomialFeatures(degree)
+    XTransform = poly.fit_transform(X)
+
+    return XTransform
 
 def computCostMulti(X, y, theta):
     '''
@@ -141,6 +165,8 @@ if __name__ == "__main__":
 
     numdays = constants.numdaysGradientDescent
 
+    warnings.filterwarnings(action="ignore", module="scipy", message="^internal gelsd")
+
     gameIDs = getDates(day, month, year, numdays, cursor)
 
     # select data with cooresponding game id and other constraints
@@ -163,9 +189,10 @@ if __name__ == "__main__":
 
     constraintsString = constraintsString + ")"
 
-    features = ['adjwOBA', 'adjBBP', 'adjBABIP', 'adjISO', 'adjOBP', 'adjSLG', 'battingOrder', 'parkFactor',
+    features = ['adjwOBA', 'adjBBP', 'adjBABIP', 'adjISO', 'adjOBP', 'adjSLG', 'adjKP', 'battingOrder', 'parkFactor',
                 'battersdaily.wOBA', 'battersdaily.ISO', 'battersdaily.SLG', 'battersdaily.OBP', 'battersdaily.BB',
-                'battersdaily.BABIP', 'battersdaily.adjSB']
+                'battersdaily.BABIP', 'battersdaily.adjSB', 'tab', 'thits', 'tsingles', 'tdoubles', 'ttriples', 'thomeruns',
+                'tstolenbases', 'truns', 'trbis', 'twalks', 'terrors', 'thbp', 'tstrikeouts']
     targets = ['dkpoints']
 
     featuresString = ""
@@ -232,14 +259,30 @@ if __name__ == "__main__":
 
     theta, JHistory, iterHistory = gradientDescentMulti(testX, testY, theta, alpha, num_iters)
 
-    print "Plotting Cost vs. Iterations"
-    plt.plot(iterHistory, JHistory, 'ro')
-    plt.xlabel("Iterations")
-    plt.ylabel("Cost")
-    plt.show()
-
-    print "Batter Theta Values"
+    print "Batter Theta Values from Homemade Gradient Descent"
     print theta
+
+    reg = LinearRegression(fit_intercept=False, normalize=True)
+    reg.fit(testX, testY)
+    thetaSKLearn = reg.coef_
+
+    print "Batter Theta Values from Sklearn Linear Regression"
+    print thetaSKLearn
+
+    ridge = Ridge(alpha=1, fit_intercept=False, normalize=True)
+    ridge.fit(testX, testY)
+    thetaSKLearnRidge = ridge.coef_
+
+    print "Batter Theta Values from Sklearn Ridge Regression"
+    print thetaSKLearnRidge
+
+    ridgeP = Ridge(alpha=150, fit_intercept=False, normalize=True)
+    newFeatures = mapFeatures(testX)
+    ridgeP.fit(newFeatures, testY)
+    thetaSKLearnRidgeP = ridgeP.coef_
+
+    print "Batter Theta Values from Sklearn Ridge Regression w/ Polynomial Feature Mapping"
+    print thetaSKLearnRidgeP
 
     gameIDP = getDate(dayP, monthP, yearP, cursor)
 
@@ -272,6 +315,11 @@ if __name__ == "__main__":
 
     # predict
     targetY = targetX.dot(np.transpose(theta))
+    targetYSKLearn = targetX.dot(np.transpose(thetaSKLearn))
+    targetYSKLearnRidge = targetX.dot(np.transpose(thetaSKLearnRidge))
+
+    newTargetX = mapFeatures(targetX)
+    targetYSKLearnRidgeP = newTargetX.dot(np.transpose(thetaSKLearnRidgeP))
 
     # load predictions into database
 
@@ -280,9 +328,12 @@ if __name__ == "__main__":
     while bID < numBatters:
         batterID = int(batterIDs[bID, 0])
         batterProjection = float(targetY[bID, 0])
+        batterProjectionSKLearn = float(targetYSKLearn[bID, 0])
+        batterProjectionSKLearnRidge = float(targetYSKLearnRidge[bID, 0])
+        batterProjectionSKLearnRidgeP = float(targetYSKLearnRidgeP[bID, 0])
 
-        updateBattersDKPoints = "UPDATE battersdaily SET dkPointsPred = %s WHERE bgameID = %s AND batterID = %s"
-        updateBatterDKPointsData = (batterProjection, gameIDP, batterID)
+        updateBattersDKPoints = "UPDATE battersdaily SET dkPointsPred = %s, dkPointsPredSKLin = %s, dkPointsPredRidge = %s, dkPointsPredRidgeP = %s WHERE bgameID = %s AND batterID = %s"
+        updateBatterDKPointsData = (batterProjection, batterProjectionSKLearn, batterProjectionSKLearnRidge, batterProjectionSKLearnRidgeP, gameIDP, batterID)
         cursor.execute(updateBattersDKPoints, updateBatterDKPointsData)
 
         bID = bID + 1

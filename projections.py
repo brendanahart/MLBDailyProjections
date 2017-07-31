@@ -5,6 +5,7 @@ import urllib2
 import demjson
 import numpy as np
 import constants
+import requests
 
 def updateLeagueProjections(cursor):
     leagueProjUpdateQuery = "UPDATE leaguebaverages SET wOBA = ((0.693)*(BB - IBB) + (0.723)*HBP + (0.876)*(H - (2B + 3B + HR)) + (1.231)*2B + (1.55)*3B + (1.977)*HR)/(AB + BB - IBB + SF + HBP), ISO = (SLG - BA), KP = SO/PA, BBP = BB/PA, BABIP = (H - HR)/(AB - SO - HR + SF)"
@@ -13,7 +14,7 @@ def updateLeagueProjections(cursor):
     print "Updated League Averages"
 
 def getParkFactors(cursor):
-    url = "http://www.baseballprospectus.com/sortable/index.php?cid=1819123"
+    url = constants.ParkFactors
 
     page = urllib2.urlopen(url).read()
     soup = BeautifulSoup(page, "html.parser")
@@ -136,16 +137,57 @@ def updateBatterProjections(day, month, year, cursor):
     allBatters = cursor.fetchall()
 
     for bat in allBatters:
-        # get dkpoints + calculated variance
-        getPerformanceQ = "SELECT dkpoints FROM battersdaily WHERE batterID = %s AND dkpoints IS NOT NULL AND bgameID != %s"
+        # get dkpoints + calculated variance + calculate totalab, thits, etc...
+        getPerformanceQ = "SELECT dkpoints, ab, hits, singles, doubles, triples, homeruns, stolenbases, runs, rbi, walks, errors, hbp, strikeouts FROM battersdaily WHERE batterID = %s AND dkpoints IS NOT NULL AND bgameID < %s"
         getPerformanceD = (bat[0], gameID)
         cursor.execute(getPerformanceQ, getPerformanceD)
 
         varianceBat = 0
 
         dkpoints = []
-        for dkpoint in cursor:
-            dkpoints.append(dkpoint[0])
+        abs = []
+        hits = []
+        singles = []
+        doubles = []
+        triples = []
+        homeruns = []
+        stolenbases = []
+        runs = []
+        rbi = []
+        walks = []
+        errors = []
+        hbp = []
+        strikeouts = []
+        for pastdata in cursor:
+            dkpoints.append(pastdata[0])
+            abs.append(pastdata[1])
+            hits.append(pastdata[2])
+            singles.append(pastdata[3])
+            doubles.append(pastdata[4])
+            triples.append(pastdata[5])
+            homeruns.append(pastdata[6])
+            stolenbases.append(pastdata[7])
+            runs.append(pastdata[8])
+            rbi.append(pastdata[9])
+            walks.append(pastdata[10])
+            errors.append(pastdata[11])
+            hbp.append(pastdata[12])
+            strikeouts.append(pastdata[13])
+
+
+        tab = np.mean(abs) if len(abs) else 0
+        thits = np.mean(hits) if len(hits) else 0
+        tsingles = np.mean(singles) if len(singles) else 0
+        tdoubles = np.mean(doubles) if len(doubles) else 0
+        ttriples = np.mean(triples) if len(triples) else 0
+        thomeruns = np.mean(homeruns) if len(homeruns) else 0
+        tstolenbases = np.mean(stolenbases) if len(stolenbases) else 0
+        truns = np.mean(runs) if len(runs) else 0
+        trbi = np.mean(rbi) if len(rbi) else 0
+        twalks = np.mean(walks) if len(walks) else 0
+        terrors = np.mean(errors) if len(errors) else 0
+        thbp = np.mean(hbp) if len(hbp) else 0
+        tstrikeouts = np.mean(strikeouts) if len(strikeouts) else 0
 
         # remove outliers
         if dkpoints:
@@ -429,17 +471,17 @@ def updateBatterProjections(day, month, year, cursor):
 
                 adjKP = (adjKP + adjKSteve)/2
 
-                updateBProjectionsQuery = "UPDATE battersdaily SET adjWOBA = %s, adjKP = %s, adjBBP = %s, adjBABIP = %s, adjISO = %s, adjOBP = %s, adjOPS = %s, adjSLG = %s, parkFactor = %s, variance = %s, wOBA = %s, ISO = %s, SLG = %s, OPS = %s, OBP = %s, KP = %s, BB = %s, BABIP = %s, adjSB = %s WHERE batterID = %s AND bgameID = %s"
-                updateBProjectionsData = (adjWOBA, adjKP, adjBBP, adjBABIP, adjISO, adjOBP, adjOPS, adjSLG, parkFactor, float(varianceBat), bWOBA, bISO, bSLG, bOPS, bOBP, bKP, bBB, bBABIP, sbRate, trueBID, gameID)
+                updateBProjectionsQuery = "UPDATE battersdaily SET adjWOBA = %s, adjKP = %s, adjBBP = %s, adjBABIP = %s, adjISO = %s, adjOBP = %s, adjOPS = %s, adjSLG = %s, parkFactor = %s, variance = %s, wOBA = %s, ISO = %s, SLG = %s, OPS = %s, OBP = %s, KP = %s, BB = %s, BABIP = %s, adjSB = %s, tab = %s, thits = %s, tsingles = %s, tdoubles = %s, ttriples = %s, thomeruns = %s, tstolenbases = %s, truns = %s, trbis = %s, twalks = %s, terrors = %s, thbp = %s, tstrikeouts = %s WHERE batterID = %s AND bgameID = %s"
+                updateBProjectionsData = (adjWOBA, adjKP, adjBBP, adjBABIP, adjISO, adjOBP, adjOPS, adjSLG, parkFactor, float(varianceBat), bWOBA, bISO, bSLG, bOPS, bOBP, bKP, bBB, bBABIP, sbRate, float(tab), float(thits), float(tsingles), float(tdoubles), float(ttriples), float(thomeruns), float(tstolenbases), float(truns), float(trbi), float(twalks), float(terrors), float(thbp), float(tstrikeouts), trueBID, gameID)
                 cursor.execute(updateBProjectionsQuery, updateBProjectionsData)
 
     print "Updated Projections based on Pitchers and Current Stats"
 
 def rotowireProjections(day, month, year, cursor):
-    url = "http://www.rotowire.com/daily/mlb/optimizer.htm?site=DraftKings&sport=MLB"
+    url = constants.RotowireDKMLB
 
-    page = urllib2.urlopen(url).read()
-    soup = BeautifulSoup(page, "html.parser")
+    page = requests.get(url)
+    soup = BeautifulSoup(page.text, 'html.parser')
 
     rotoWireData = []
 
@@ -569,13 +611,13 @@ def rotowireProjections(day, month, year, cursor):
     return
 
 def saberSimProjections(day, month, year, cursor):
-    url = "http://www.fangraphs.com/dailyprojections.aspx?pos=all&stats=pit&type=sabersim&team=0&lg=all&players=0"
+    url = constants.SaberSimPitcherProjections
 
-    page = urllib2.urlopen(url).read()
-    soup = BeautifulSoup(page, "html.parser")
+    page = requests.get(url)
+    soup = BeautifulSoup(page.text, 'html.parser')
 
     saberSimData = []
-    for tr in soup.find_all('tr')[4:]:
+    for tr in soup.find_all('tr')[6:]:
         tds = tr.find_all('td')
 
         playerData = {}
@@ -632,8 +674,8 @@ def saberSimProjections(day, month, year, cursor):
 def rotogrindersProjections(day, month, year, cursor, type, link):
     url = link
 
-    page = urllib2.urlopen(url).read()
-    soup = BeautifulSoup(page, "html.parser")
+    page = requests.get(url)
+    soup = BeautifulSoup(page.text, 'html.parser')
 
     # get object
     script = soup.find_all("script")
@@ -671,7 +713,7 @@ def rotogrindersProjections(day, month, year, cursor, type, link):
         playerData['points'] = points
 
         pOwn = (line['pown%'])
-        if pOwn is None:
+        if pOwn is None or pOwn == '':
             playerData['pOWN'] = .001
         else:
             pOwn = pOwn.replace("%", "")
@@ -806,8 +848,8 @@ if __name__ == "__main__":
     updateBatterProjections(day, month, year, cursor)
     rotowireProjections(day, month, year, cursor)
     saberSimProjections(day, month, year, cursor)
-    rotogrindersProjections(day, month, year, cursor, "pitcher", "https://rotogrinders.com/projected-stats/mlb-pitcher?site=draftkings")
-    rotogrindersProjections(day, month, year, cursor, "batter", "https://rotogrinders.com/projected-stats/mlb-hitter?site=draftkings")
+    rotogrindersProjections(day, month, year, cursor, "pitcher", constants.RotogrindersPitcher)
+    rotogrindersProjections(day, month, year, cursor, "batter", constants.RotogrindersBatter)
     pitcherAggProjections(day, month, year, cursor)
 
     cursor.close()
